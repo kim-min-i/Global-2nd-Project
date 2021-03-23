@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="review">
+	<insert id="insertReview" parameterType="reviewDTO">
+		insert into review(
+			no,
+			member_email,
+			hospital_no,
+			doc_mail,
+			revisit,
+			public_check,
+			reg_date
+		)values(
+			review_seq.nextval,
+			#{member_email},
+			#{hospital_no},
+			#{doc_mail},
+			#{revisit},
+			#{public_check},
+			sysdate
+		)	
+	</insert>
+	
+	<select id="selectNewNo" resultType="int">
+		select max(no) from review
+	</select>
+	
+	<select id="getListReview" parameterType="hashMap" resultType="reviewDTO">
+		select no,member_email,hospital_no,doc_mail,revisit,public_check,auth_check,reg_date,r 
+		from (select no,member_email,hospital_no,doc_mail,revisit,public_check,auth_check,reg_date,rownum r 
+			from (select * 
+				from (select review.no,member_email,hospital_no,doc_mail,revisit,public_check,auth_check,reg_date,mean 
+				from review join review_rating 
+			on review.no = review_rating.review_no) 
+			order by 
+			<choose>
+				<when test="searchType == 'ratingOrder'">mean desc</when> 
+				<otherwise>reg_date desc</otherwise>
+			</choose>
+			) 
+		where hospital_no = #{hospital_no} and auth_check = 'Y' and public_check = 'Y')
+		<![CDATA[where r >= #{start} and r <= #{end}]]>
+	</select>
+	
+	<select id="getListReviewCount" parameterType="int" resultType="int">
+		select count(*) from review where hospital_no = #{hospital_no} and auth_check = 'Y' and public_check = 'Y'
+	</select>
+	
+	<select id="getRecomCount" parameterType="int" resultType="int">
+		select count(revisit) from review where revisit = 'Y' and hospital_no = #{value} and auth_check = 'Y'
+	</select>
+	
+	<select id="getNotRecomCount" parameterType="int" resultType="int">
+		select count(revisit) from review where revisit = 'N' and hospital_no = #{value} and auth_check = 'Y'
+	</select>
+	
+	<select id="getListAuthCheckReview" parameterType="hashMap" resultType="reviewDTO">
+		select no,member_email,hospital_no,doc_mail,revisit,public_check,auth_check,reg_date,r from 
+		(select no,member_email,hospital_no,doc_mail,revisit,public_check,auth_check,reg_date,rownum r from 
+		(select * from review order by 
+		reg_date desc) 
+		<where>
+		<if test="searchType==null">and auth_check = 'N'</if>
+		<if test="searchType=='no'">and auth_check = 'N'</if>
+		<if test="searchType=='ok'">and auth_check = 'Y'</if>
+		<if test="searchType=='cancle'">and auth_check = 'D'</if>
+		</where>
+		) 
+		<![CDATA[where r >= #{start} and r <= #{end}]]>
+	</select>
+	
+	<select id="getListAuthCheckReviewCount" resultType="int" parameterType="String">
+		select count(*) from review 
+		<where>
+		<if test="searchType==null">and auth_check = 'N'</if>
+		<if test="searchType=='no'">and auth_check = 'N'</if>
+		<if test="searchType=='ok'">and auth_check = 'Y'</if>
+		<if test="searchType=='cancle'">and auth_check = 'D'</if>
+		</where>
+	</select>
+	
+	<select id="selectAuth" parameterType="int" resultType="String">
+		select auth_check from review where no = #{value}
+	</select>
+	
+	<update id="okAuthCheck" parameterType="int">
+		update review set auth_check = 'Y' where no = #{value}
+	</update>
+	
+	<update id="noAuthCheck" parameterType="int">
+		update review set auth_check = 'D' where no = #{value}
+	</update>
+	
+	<select id="selectByReviewNo" parameterType="int" resultType="reviewDTO">
+		select * from review where no = #{value}
+	</select>
+	
+	<select id="selectMyhospitalByHospitalNo" parameterType="int" resultType="pet.model.dto.DocMyHospitalDTO">
+		select * from doc_myhospital where hospital_no = #{value}
+	</select>
+	
+	<select id="selectHospitalByHospitalNo" parameterType="int" resultType="pet.model.dto.HospitalDTO">
+		select * from hospital where no = #{value}
+	</select>
+	
+	<select id="getDocInfo" parameterType="int" resultType="pet.model.dto.DocInfoDTO">
+		select * from doc_info where hospital_no = #{value}
+	</select>
+	
+	<select id="selectHospitalAll" resultType="pet.model.dto.HospitalDTO">
+		select * from hospital where state='정상'
+	</select>
+	
+	<select id="selectDocMailByName" parameterType="pet.model.dto.DocInfoDTO" resultType="String">
+		select doc_mail from doc_info where doc_name=#{doc_name} and hospital_no=#{hospital_no}
+	</select>
+	
+	<select id="selectHospitalName" parameterType="int" resultType="String">
+		select name from hospital where no = #{value}
+	</select>
+	
+	<select id="selectNickByEmail" parameterType="String" resultType="String">
+		select pen_name from member where email = #{value}
+	</select>
+</mapper>
